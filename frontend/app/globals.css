@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #030712; /* Obsidian Black */
+  color: #F3F4F6;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* Glassmorphism card framing styles */
+.glass-panel {
+  background: rgba(11, 17, 23, 0.75);
+  border: 1px solid #1F2937;
+  backdrop-filter: blur(12px);
+}
+
+/* Active component glow accents */
+.interactive-glow:focus, .interactive-glow.active {
+  border-color: #38BDF8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
