@@ -208,9 +208,9 @@ export default function InterchangeDashboard() {
                 </div>
               </div>
 
-              {/* Fee Allocation Waterfall Component */}
+              {/* Fee Allocation Waterfall Component (By Issuer / Network / Processor) */}
               <div className="mt-5 pt-3 border-t border-[#1F2937]/60">
-                <span className="text-[10px] font-mono text-gray-500 uppercase block mb-2">// Fee Allocation Waterfall ($100 Settlement Unit)</span>
+                <span className="text-[10px] font-mono text-gray-500 uppercase block mb-2">// Fee Allocation Waterfall (By Issuer / Network / Processor)</span>
                 <div className="space-y-2 text-xs font-mono">
                   <div>
                     <div className="flex justify-between text-gray-400 text-[11px] mb-1">
@@ -224,7 +224,7 @@ export default function InterchangeDashboard() {
 
                   <div>
                     <div className="flex justify-between text-gray-400 text-[11px] mb-1">
-                      <span>2. Network Assessment (Visa/MC Rail)</span>
+                      <span>2. Network Assessment Fee (Visa/MC Rail)</span>
                       <span className="text-[#818CF8]">15% of total fee</span>
                     </div>
                     <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden border border-[#1F2937]">
@@ -346,7 +346,7 @@ export default function InterchangeDashboard() {
             </p>
           </div>
 
-          {/* Section d: Functional Filters */}
+          {/* Section D: Functional Filters */}
           <div className="border-t border-[#1F2937] pt-4 flex flex-col gap-3">
             <div>
               <span className="text-[10px] font-mono uppercase text-gray-500 tracking-widest block">// SECTION D // LOGISTICS CONTROL</span>
@@ -387,8 +387,8 @@ export default function InterchangeDashboard() {
           </div>
         </div>
 
-        {/* Section E: Download Data Button */}
-        <div className="border-t border-[#1F2937] pt-4 mt-6">
+        {/* Section E: Primary Actions Layer for Exporting Data Manifests & Assumptions */}
+        <div className="border-t border-[#1F2937] pt-4 mt-6 flex flex-col gap-2">
           <a 
             href={`${API_URL}/api/stations/csv`}
             target="_blank"
@@ -397,6 +397,31 @@ export default function InterchangeDashboard() {
           >
             DOWNLOAD DATA MANIFEST (.CSV)
           </a>
+
+          <button 
+            onClick={() => {
+              const assumptionsData = {
+                timestamp: new Date().toISOString(),
+                calculator_inputs: calculatorInput,
+                runtime_outcomes: calculationResult,
+                allocation_rules: {
+                  issuer_percentage: calculatorInput.credit_card_pct > 60 ? 78 : 55,
+                  network_percentage: 15,
+                  processor_percentage: calculatorInput.card_present_pct < 50 ? 30 : 10
+                }
+              };
+              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(assumptionsData, null, 2));
+              const downloadAnchor = document.createElement('a');
+              downloadAnchor.setAttribute("href", dataStr);
+              downloadAnchor.setAttribute("download", "interchange_assumptions_export.json");
+              document.body.appendChild(downloadAnchor);
+              downloadAnchor.click();
+              downloadAnchor.remove();
+            }}
+            className="w-full bg-transparent border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-white text-xs font-mono py-2.5 px-4 rounded text-center block transition-all tracking-wider font-semibold active:scale-[0.99]"
+          >
+            EXPORT ASSUMPTIONS (.JSON)
+          </button>
         </div>
 
       </aside>
