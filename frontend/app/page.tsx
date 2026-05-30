@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function InterchangeDashboard() {
   const API_URL = "http://localhost:8000";
@@ -25,6 +25,37 @@ export default function InterchangeDashboard() {
 
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [registryEntries, setRegistryEntries] = useState<any[]>([]);
+
+  // Chart Component DOM References
+  const echartsRef = useRef<HTMLDivElement>(null);
+  const plotlyRef = useRef<HTMLDivElement>(null);
+  const d3Ref = useRef<HTMLDivElement>(null);
+
+  // Load Visualization Infrastructure Engines Dynamically (ECharts, Plotly, D3)
+  useEffect(() => {
+    const scripts = [
+      "https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js",
+      "https://cdn.plot.ly/plotly-2.27.0.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"
+    ];
+
+    let loadedCount = 0;
+    scripts.forEach((src) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        loadedCount++;
+        if (loadedCount === scripts.length) renderAllCharts();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = () => {
+        loadedCount++;
+        if (loadedCount === scripts.length) renderAllCharts();
+      };
+      document.body.appendChild(script);
+    });
+  }, [calculationResult]);
 
   // Telemetry Pipeline Sync
   useEffect(() => {
@@ -76,6 +107,104 @@ export default function InterchangeDashboard() {
       setCalculationResult(d);
     } catch (e) {
       console.error("Calculation execution fault:", e);
+    }
+  };
+
+  // Render Engine for Embedded Visualization Libraries
+  const renderAllCharts = () => {
+    if (!calculationResult) return;
+    const windowAny = window as any;
+
+    // ─── 1. APACHE ECHARTS: Radar Metric Take Matrix ───
+    if (windowAny.echarts && echartsRef.current) {
+      const chartInstance = windowAny.echarts.init(echartsRef.current);
+      const currentRate = parseFloat(calculationResult.blended_rate_pct) || 0;
+      
+      chartInstance.setOption({
+        radar: {
+          indicator: [
+            { name: 'Issuer Core Take', max: 3 },
+            { name: 'Network Premium', max: 3 },
+            { name: 'Processor Margin', max: 3 },
+          ],
+          splitLine: { lineStyle: { color: '#1F2937' } },
+          axisLine: { lineStyle: { color: '#1F2937' } },
+          name: { textStyle: { color: '#9CA3AF', fontSize: 9, fontFamily: 'monospace' } }
+        },
+        series: [{
+          type: 'radar',
+          data: [{
+            value: [currentRate, currentRate * 0.8, currentRate * 1.1],
+            name: 'Network Profile',
+            itemStyle: { color: '#38BDF8' },
+            areaStyle: { color: 'rgba(56, 189, 248, 0.15)' }
+          }]
+        }]
+      });
+    }
+
+    // ─── 2. PLOTLY: Scenario Dynamic Cost Comparison ───
+    if (windowAny.Plotly && plotlyRef.current) {
+      const totalFees = calculationResult.estimated_monthly_fees || 0;
+      const savings = calculationResult.potential_savings || 0;
+
+      const traceData = [
+        {
+          x: ['Baseline Outflow', 'Smart Optimized Routing'],
+          y: [totalFees, Math.max(0, totalFees - savings)],
+          type: 'bar',
+          marker: { color: ['#818CF8', '#38BDF8'] }
+        }
+      ];
+
+      const layoutConfig = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#9CA3AF', size: 9, family: 'monospace' },
+        margin: { t: 5, b: 25, l: 35, r: 5 },
+        height: 120,
+        xaxis: { gridcolor: '#1F2937', zeroline: false },
+        yaxis: { gridcolor: '#1F2937', zeroline: false }
+      };
+
+      windowAny.Plotly.newPlot(plotlyRef.current, traceData, layoutConfig, { displayModeBar: false });
+    }
+
+    // ─── 3. D3.JS: Dynamic Cascade Scale Component ───
+    if (windowAny.d3 && d3Ref.current) {
+      d3Ref.current.innerHTML = ""; // Prune previous instances
+      const containerWidth = d3Ref.current.clientWidth || 300;
+      
+      const svg = windowAny.d3.select(d3Ref.current)
+        .append("svg")
+        .attr("width", containerWidth)
+        .attr("height", 24)
+        .style("background", "#030712")
+        .style("border", "1px solid #1F2937")
+        .style("border-radius", "4px");
+
+      const issuerPct = calculatorInput.credit_card_pct > 60 ? 78 : 55;
+      const networkPct = 15;
+      const processorPct = 100 - issuerPct - networkPct;
+
+      const metricsAllocation = [
+        { percentage: issuerPct, color: "#38BDF8" },
+        { percentage: networkPct, color: "#818CF8" },
+        { percentage: processorPct, color: "#4B5563" }
+      ];
+
+      let trackingX = 0;
+      metricsAllocation.forEach((segment) => {
+        const componentWidth = (segment.percentage / 100) * containerWidth;
+        svg.append("rect")
+          .attr("x", trackingX)
+          .attr("y", 0)
+          .attr("width", componentWidth)
+          .attr("height", 24)
+          .attr("fill", segment.color)
+          .attr("opacity", 0.9);
+        trackingX += componentWidth;
+      });
     }
   };
 
@@ -173,6 +302,12 @@ export default function InterchangeDashboard() {
                 className="w-full accent-[#38BDF8] h-1 bg-[#1F2937] rounded-lg cursor-pointer"
               />
             </div>
+
+            {/* Apache ECharts Container View */}
+            <div className="mt-1 border-t border-[#1F2937]/80 pt-3">
+              <span className="text-[10px] font-mono text-gray-500 block uppercase mb-1">// Apache ECharts Radar Architecture Matrix</span>
+              <div ref={echartsRef} className="w-full h-24" />
+            </div>
           </div>
 
           {/* Dynamic Matrix Scenario Analytics Outputs */}
@@ -183,25 +318,25 @@ export default function InterchangeDashboard() {
               </h2>
               <p className="text-xs text-gray-400 font-mono mt-3 uppercase tracking-tight">PROCESSED CLASSIFICATION: <span className="text-white font-sans font-medium">{calculationResult?.mcc_label}</span></p>
               
-              <div className="mt-4 flex flex-col gap-4">
+              <div className="mt-3 flex flex-col gap-3">
                 <div>
                   <span className="text-[10px] text-gray-500 block uppercase font-mono">Blended Interchange Matrix Cost</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-white font-mono tracking-tight">{calculationResult?.blended_rate_pct}</span>
+                    <span className="text-2xl font-bold text-white font-mono tracking-tight">{calculationResult?.blended_rate_pct}</span>
                     <span className="text-xs text-gray-400 font-mono">per settlement batch</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="bg-[#030712] p-3 rounded border border-[#1F2937]">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[#030712] p-2.5 rounded border border-[#1F2937]">
                     <span className="text-[10px] font-mono text-gray-500 block">MONTHLY TAKE OUTFLOW</span>
-                    <span className="text-lg font-bold text-white font-mono">
+                    <span className="text-base font-bold text-white font-mono">
                       {calculationResult?.estimated_monthly_fees ? calculationResult.estimated_monthly_fees.toLocaleString() : "0"} {calculationResult?.currency}
                     </span>
                   </div>
-                  <div className="bg-[#030712] p-3 rounded border border-[#1F2937]">
+                  <div className="bg-[#030712] p-2.5 rounded border border-[#1F2937]">
                     <span className="text-[10px] font-mono text-gray-500 block">BENCHMARK VARIANCE</span>
-                    <span className={`text-lg font-bold font-mono ${calculationResult?.variance_vs_benchmark >= 0 ? 'text-red-400' : 'text-[#38BDF8]'}`}>
+                    <span className={`text-base font-bold font-mono ${calculationResult?.variance_vs_benchmark >= 0 ? 'text-red-400' : 'text-[#38BDF8]'}`}>
                       {calculationResult?.variance_vs_benchmark}%
                     </span>
                   </div>
@@ -209,54 +344,39 @@ export default function InterchangeDashboard() {
               </div>
 
               {/* Fee Allocation Waterfall Component (By Issuer / Network / Processor) */}
-              <div className="mt-5 pt-3 border-t border-[#1F2937]/60">
-                <span className="text-[10px] font-mono text-gray-500 uppercase block mb-2">// Fee Allocation Waterfall (By Issuer / Network / Processor)</span>
-                <div className="space-y-2 text-xs font-mono">
-                  <div>
-                    <div className="flex justify-between text-gray-400 text-[11px] mb-1">
-                      <span>1. Card Issuer Interchange Core</span>
-                      <span className="text-white">{(calculatorInput.credit_card_pct > 60 ? 78 : 55)}% of total fee</span>
-                    </div>
-                    <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden border border-[#1F2937]">
-                      <div className="bg-[#38BDF8] h-full" style={{ width: calculatorInput.credit_card_pct > 60 ? '78%' : '55%' }} />
-                    </div>
-                  </div>
+              <div className="mt-4 pt-3 border-t border-[#1F2937]/60">
+                <span className="text-[10px] font-mono text-gray-500 uppercase block mb-1.5">// Fee Allocation Waterfall (By Issuer / Network / Processor)</span>
+                
+                {/* D3.js Micro Scaling Dynamic Ribbon */}
+                <div ref={d3Ref} className="w-full mb-2.5" />
 
-                  <div>
-                    <div className="flex justify-between text-gray-400 text-[11px] mb-1">
-                      <span>2. Network Assessment Fee (Visa/MC Rail)</span>
-                      <span className="text-[#818CF8]">15% of total fee</span>
-                    </div>
-                    <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden border border-[#1F2937]">
-                      <div className="bg-[#818CF8] h-full" style={{ width: '15%' }} />
-                    </div>
+                <div className="space-y-1 text-xs font-mono">
+                  <div className="flex justify-between text-gray-400 text-[11px]">
+                    <span>1. Card Issuer Interchange Core</span>
+                    <span className="text-white">{(calculatorInput.credit_card_pct > 60 ? 78 : 55)}% of total fee</span>
                   </div>
-
-                  <div>
-                    <div className="flex justify-between text-gray-400 text-[11px] mb-1">
-                      <span>3. Acquirer / Processor Risk Margin</span>
-                      <span className="text-gray-400">{(calculatorInput.card_present_pct < 50 ? 30 : 10)}% of total fee</span>
-                    </div>
-                    <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden border border-[#1F2937]">
-                      <div className="bg-gray-600 h-full" style={{ width: calculatorInput.card_present_pct < 50 ? '30%' : '10%' }} />
-                    </div>
+                  <div className="flex justify-between text-gray-400 text-[11px]">
+                    <span>2. Network Assessment Fee (Visa/MC Rail)</span>
+                    <span className="text-[#818CF8]">15% of total fee</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400 text-[11px]">
+                    <span>3. Acquirer / Processor Risk Margin</span>
+                    <span className="text-gray-400">{(calculatorInput.card_present_pct < 50 ? 30 : 10)}% of total fee</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Smart Routing Insight Module Overlay */}
-            <div className="mt-4 pt-4 border-t border-[#1F2937] bg-gradient-to-r from-[#030712] to-transparent p-3 rounded border border-dashed border-[#1F2937]">
-              <span className="text-[10px] font-mono text-[#818CF8] uppercase block">▲ Real Rails Cost Allocation Matrix</span>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed">
-                Deploying custom routing protocols optimizes baseline execution charges to <strong className="text-[#38BDF8]">{calculationResult?.optimized_rate_pct}</strong>, reducing costs by <strong className="text-emerald-400">{calculationResult?.potential_savings ? calculationResult.potential_savings.toLocaleString() : "0"} {calculationResult?.currency}/mo</strong>.
-              </p>
+            {/* Plotly Optimization Stack Section */}
+            <div className="mt-3 border-t border-[#1F2937] pt-2">
+              <span className="text-[10px] font-mono text-[#818CF8] uppercase block mb-1">// Plotly Delta Parameter Analysis</span>
+              <div ref={plotlyRef} className="w-full" />
             </div>
           </div>
         </div>
 
         {/* Dynamic Profile Registry Data-Grid Display */}
-        <div className="flex-1 bg-[#0B1117] border border-[#1F2937] rounded-lg p-4 flex flex-col min-h-[300px]">
+        <div className="flex-1 bg-[#0B1117] border border-[#1F2937] rounded-lg p-4 flex flex-col min-h-[250px]">
           <span className="text-xs font-mono uppercase text-[#38BDF8] tracking-wider mb-3 block">// Granular Infrastructure Mix Logs</span>
           <div className="flex-1 overflow-y-auto text-xs font-mono custom-scrollbar">
             <table className="w-full text-left border-collapse">
@@ -407,7 +527,7 @@ export default function InterchangeDashboard() {
                 allocation_rules: {
                   issuer_percentage: calculatorInput.credit_card_pct > 60 ? 78 : 55,
                   network_percentage: 15,
-                  processor_percentage: calculatorInput.card_present_pct < 50 ? 30 : 10
+                  processor_percentage: 100 - (calculatorInput.credit_card_pct > 60 ? 78 : 55) - 15
                 }
               };
               const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(assumptionsData, null, 2));
